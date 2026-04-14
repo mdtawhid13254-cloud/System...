@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>তাওহিদ এআই - প্রো</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap');
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #050505; }
+        body { display: flex; flex-direction: column; font-family: 'Hind Siliguri', sans-serif; color: #fff; }
+        
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { background: #111; padding: 25px; border-radius: 15px; border: 1px solid #ff0000; width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.2); }
+        .login-box h2 { color: #ff0000; font-size: 1.2rem; text-align: center; margin: 0; }
+        .login-box input, .login-box button { width: 100%; height: 45px; padding: 0 15px; border-radius: 8px; font-size: 1rem; box-sizing: border-box; outline: none; border: 1px solid #333; }
+        .login-box input { background: #1a1a1a; color: #fff; }
+        .login-box button { background: #ff0000; border: none; color: #fff; font-weight: bold; cursor: pointer; }
+        
+        .top-bar { padding: 12px 15px; background: #000; border-bottom: 1px solid #222; flex-shrink: 0; }
+        .name { font-weight: 700; color: #ff0000; font-size: 1.2rem; }
+        
+        .suggestion-bar { background: #0a0a0a; padding: 10px 0; border-bottom: 1px solid #1a1a1a; overflow-x: auto; white-space: nowrap; display: flex; scrollbar-width: none; flex-shrink: 0; }
+        .suggestion-bar::-webkit-scrollbar { display: none; }
+        .q-btn { background: #111; color: #eee; border: 1px solid #333; padding: 7px 15px; margin-left: 10px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
+        
+        .chat-viewport { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; position: relative; }
+        #welcomeText { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 0.85rem; color: #555; text-align: center; width: 90%; pointer-events: none; }
+        
+        /* চ্যাট পজিশন ফিক্স */
+        .msg-container { display: flex; flex-direction: column; width: 100%; }
+        .msg { max-width: 80%; padding: 10px 14px; font-size: 1rem; line-height: 1.5; border-radius: 15px; position: relative; display: flex; flex-direction: column; }
+        
+        /* ইউজার চ্যাট ডান দিকে */
+        .user-msg-container { align-items: flex-end; }
+        .user-msg { background: #222; color: #ffffff; border-bottom-right-radius: 2px; text-align: right; }
+        
+        /* এআই চ্যাট বাম দিকে */
+        .bot-msg-container { align-items: flex-start; }
+        .bot-msg { background: #001a33; color: #3399ff; border-bottom-left-radius: 2px; border: 1px solid #004080; }
+        
+        /* বাটনটি টেক্সটের নিচে */
+        .voice-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid currentColor; color: inherit; font-size: 0.7rem; padding: 4px 10px; margin-top: 8px; cursor: pointer; border-radius: 6px; align-self: flex-start; width: fit-content; }
+        .user-msg .voice-btn { align-self: flex-end; }
+
+        .input-section { padding: 15px; background: #000; border-top: 1px solid #1a1a1a; flex-shrink: 0; }
+        .input-container { display: flex; gap: 10px; }
+        #userInput { flex: 1; background: #111; border: 1px solid #333; color: #fff; padding: 12px; outline: none; border-radius: 10px; font-size: 1rem; }
+        .send-btn { background: #ff0000; color: #fff; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="loginOverlay"><div class="login-box"><h2>💔 আপনার পরিচয় দিন 💔</h2><input type="text" id="uName" placeholder="Admin"><input type="password" id="uPass" placeholder="1234"><button onclick="checkLogin()">প্রবেশ করুন</button></div></div>
+    
+    <header class="top-bar"><div class="name">💔 System...</div></header>
+    
+    <div class="suggestion-bar">
+        <button class="q-btn" onclick="quickAsk('কে বানিয়েছে?')">তোমাকে কে বানিয়েছে?</button>
+        <button class="q-btn" onclick="quickAsk('তোমার নাম কি?')">তোমার নাম কি?</button>
+        <button class="q-btn" onclick="quickAsk('আমার ফোন নাম্বার দাও')">আমার নাম্বার</button>
+        <button class="q-btn" onclick="quickAsk('আমার বাড়ি কোথায়?')">ঠিকানা</button>
+    </div>
+
+    <main class="chat-viewport" id="chatBox"><div id="welcomeText">আমি কিভাবে আপনাকে সাহায্য করতে পারি?</div></main>
+    
+    <footer class="input-section"><div class="input-container"><input type="text" id="userInput" placeholder="লিখুন..."><button class="send-btn" onclick="handleSend()">পাঠান</button></div></footer>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+
+        function checkLogin() {
+            if(document.getElementById('uName').value === "" && document.getElementById('uPass').value === "") {
+                document.getElementById('loginOverlay').style.display = 'none';
+                userInput.focus();
+            } else { alert("ভুল পাসওয়ার্ড!"); }
+        }
+
+        function quickAsk(text) { userInput.value = text; handleSend(); }
+
+        function getAIResponse(input) {
+            const text = input.toLowerCase();
+            if (text.includes("number")) return "আপনার ফোন নম্বর হলো: ০১৮৮৪৬৫৯৯৪৫।";
+            if (text.includes("কে বানিয়েছে")) return "আমাকে বানিয়েছেন তাওহিদ।";
+            if (text.includes("নাম কি")) return "আমার নাম System।";
+            if (text.includes("ঠিকানা")) return "আপনার বাড়ির ঠিকানা হলো: বাংলাদেশ, ময়মনসিংহ, ভালুকা, বান্দাবো, বয়ড়াপাড়া।";
+            if (text.includes("গেম")) return "আপনি সারাদিন FreeFire গেমটি খেলেন।";
+            if (text.includes("ভালোবাসি")) return "আমিও তোমাকে ভালোবাসি।";
+            return "দুঃখিত, আমি আপনার কথাটি বুঝতে পারিনি।";
+        }
+
+        function handleSend() {
+            const text = userInput.value.trim();
+            if (!text) return;
+            document.getElementById('welcomeText').style.display = 'none';
+            addMsg(text, 'user-msg', true); 
+            userInput.value = "";
+            setTimeout(() => {
+                const reply = getAIResponse(text);
+                addMsg(reply, 'bot-msg', true);
+            }, 600);
+        }
+
+        function addMsg(text, type, showVoice) {
+            const container = document.createElement('div');
+            container.className = `msg-container ${type}-container`;
+            
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.innerHTML = `<span>${text}</span>`;
+            
+            if(showVoice) {
+                const vBtn = document.createElement('button');
+                vBtn.className = 'voice-btn';
+                vBtn.innerText = '🔊 শুনুন';
+                vBtn.onclick = () => {
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = 'bn-BD'; u.pitch = 1.3;
+                    window.speechSynthesis.speak(u);
+                };
+                div.appendChild(vBtn);
+            }
+            
+            container.appendChild(div);
+            chatBox.appendChild(container);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
